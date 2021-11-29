@@ -584,6 +584,36 @@ where
     }
 }
 
+#[cfg(feature = "expensive-debug")]
+impl<K> std::fmt::Debug for Node<K>
+where
+    K: std::fmt::Debug + Ord + Clone + BorshSerialize + BorshDeserialize,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Node")
+            .field("id", &self.id)
+            .field("key", &self.key)
+            .field("lft", &self.lft)
+            .field("rgt", &self.rgt)
+            .field("ht", &self.ht)
+            .finish()
+    }
+}
+
+#[cfg(feature = "expensive-debug")]
+impl<K, V> std::fmt::Debug for LegacyTreeMap<K, V>
+where
+    K: std::fmt::Debug + Ord + Clone + BorshSerialize + BorshDeserialize,
+    V: std::fmt::Debug + BorshSerialize + BorshDeserialize,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LegacyTreeMap")
+            .field("root", &self.root)
+            .field("tree", &self.tree.iter().collect::<Vec<Node<K>>>())
+            .finish()
+    }
+}
+
 impl<'a, K, V> IntoIterator for &'a LegacyTreeMap<K, V>
 where
     K: Ord + Clone + BorshSerialize + BorshDeserialize,
@@ -682,12 +712,10 @@ mod tests {
     use crate::test_utils::{next_trie_id, test_env};
 
     extern crate rand;
-    use self::rand::RngCore;
+    use self::rand::{Rng, RngCore, SeedableRng};
     use quickcheck::QuickCheck;
     use std::collections::BTreeMap;
     use std::collections::HashSet;
-    use std::fmt::Formatter;
-    use std::fmt::{Debug, Result};
 
     /// Return height of the tree - number of nodes on the longest path starting from the root node.
     fn height<K, V>(tree: &LegacyTreeMap<K, V>) -> u64
@@ -722,35 +750,6 @@ mod tests {
 
         let h = C * log2(n as f64 + D) + B;
         h.ceil() as u64
-    }
-
-    impl<K> Debug for Node<K>
-    where
-        K: Ord + Clone + Debug + BorshSerialize + BorshDeserialize,
-    {
-        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            f.debug_struct("Node")
-                .field("id", &self.id)
-                .field("key", &self.key)
-                .field("lft", &self.lft)
-                .field("rgt", &self.rgt)
-                .field("ht", &self.ht)
-                .finish()
-        }
-    }
-
-    impl<K, V> Debug for LegacyTreeMap<K, V>
-    where
-        K: Ord + Clone + Debug + BorshSerialize + BorshDeserialize,
-        V: Debug + BorshSerialize + BorshDeserialize,
-    {
-        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            f.debug_struct("TreeMap")
-                .field("root", &self.root)
-                .field("tree", &self.tree.iter().collect::<Vec<Node<K>>>())
-                .field("val", &self.val.iter().collect::<Vec<(K, V)>>())
-                .finish()
-        }
     }
 
     #[test]
@@ -1610,8 +1609,8 @@ mod tests {
 
     fn is_balanced<K, V>(map: &LegacyTreeMap<K, V>, root: u64) -> bool
     where
-        K: Debug + Ord + Clone + BorshSerialize + BorshDeserialize,
-        V: Debug + BorshSerialize + BorshDeserialize,
+        K: std::fmt::Debug + Ord + Clone + BorshSerialize + BorshDeserialize,
+        V: std::fmt::Debug + BorshSerialize + BorshDeserialize,
     {
         let node = map.node(root).unwrap();
         let balance = map.get_balance(&node);
@@ -1704,5 +1703,24 @@ mod tests {
         }
 
         QuickCheck::new().tests(300).quickcheck(prop as Prop);
+    }
+
+    #[test]
+    #[cfg(feature = "expensive-debug")]
+    fn test_debug() {
+        let mut rng = rand_xorshift::XorShiftRng::seed_from_u64(4);
+        let mut map = LegacyTreeMap::new(b"m");
+        let mut baseline = vec![];
+        for _ in 0..10 {
+            let key = rng.gen::<u64>();
+            let value = rng.gen::<u64>();
+            baseline.push((key, value));
+            map.insert(&key, &value);
+        }
+
+        assert_eq!(
+            format!("{:?}", map),
+            format!("LegacyTreeMap {{ root: {:?}, tree: {:?} }}", map.root, map.tree)
+        );
     }
 }

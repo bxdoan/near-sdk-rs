@@ -171,6 +171,16 @@ where
     }
 }
 
+#[cfg(feature = "expensive-debug")]
+impl<T> std::fmt::Debug for UnorderedSet<T>
+where
+    T: std::fmt::Debug + BorshSerialize + BorshDeserialize,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.to_vec().fmt(f)
+    }
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 mod tests {
@@ -329,5 +339,20 @@ mod tests {
 
         let actual: HashSet<u64> = set.iter().collect();
         assert_eq!(actual, keys);
+    }
+
+    #[test]
+    #[cfg(feature = "expensive-debug")]
+    fn test_debug() {
+        let mut rng = rand_xorshift::XorShiftRng::seed_from_u64(4);
+        let mut set = UnorderedSet::new(b"m");
+        let mut baseline = vec![];
+        for _ in 0..10 {
+            let value = rng.gen::<u64>();
+            baseline.push(value);
+            set.insert(&value);
+        }
+
+        assert_eq!(format!("{:#?}", set), format!("{:#?}", baseline));
     }
 }

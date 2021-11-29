@@ -11,7 +11,7 @@ use crate::{env, IntoStorageKey};
 const ERR_ELEMENT_SERIALIZATION: &str = "Cannot serialize element with Borsh";
 
 /// An non-iterable implementation of a set that stores its content directly on the trie.
-#[derive(BorshSerialize, BorshDeserialize)]
+#[derive(BorshSerialize, BorshDeserialize, Debug)]
 pub struct LookupSet<T> {
     element_prefix: Vec<u8>,
     #[borsh_skip]
@@ -203,5 +203,22 @@ mod tests {
         for key in keys {
             assert!(set.contains(&key));
         }
+    }
+
+    #[test]
+    fn test_debug() {
+        let mut rng = rand_xorshift::XorShiftRng::seed_from_u64(4);
+        let mut set = LookupSet::new(b"m");
+        let mut baseline = vec![];
+        for _ in 0..10 {
+            let value = rng.gen::<u64>();
+            baseline.push(value);
+            set.insert(&value);
+        }
+
+        assert_eq!(
+            format!("{:?}", set),
+            format!("LookupSet {{ element_prefix: {:?}, el: PhantomData }}", set.element_prefix)
+        );
     }
 }

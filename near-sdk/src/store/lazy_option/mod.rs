@@ -160,4 +160,14 @@ mod tests {
         drop(a);
         assert!(!env::storage_has_key(b"a"));
     }
+
+    #[test]
+    #[cfg(feature = "expensive-debug")]
+    pub fn test_debug() {
+        let mut lazy_option = LazyOption::new(b"a", None);
+        assert_eq!(format!("{:?}", lazy_option), "None");
+
+        lazy_option.set(Some(1u64));
+        assert_eq!(format!("{:?}", lazy_option), "Some(1)");
+    }
 }

@@ -30,3 +30,13 @@ where
         Self::get_mut(self)
     }
 }
+
+#[cfg(feature = "expensive-debug")]
+impl<T> std::fmt::Debug for LazyOption<T>
+where
+    T: std::fmt::Debug + BorshSerialize + BorshDeserialize,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.get().fmt(f)
+    }
+}

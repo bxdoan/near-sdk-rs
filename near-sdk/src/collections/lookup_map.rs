@@ -13,7 +13,7 @@ const ERR_VALUE_DESERIALIZATION: &str = "Cannot deserialize value with Borsh";
 const ERR_VALUE_SERIALIZATION: &str = "Cannot serialize value with Borsh";
 
 /// An non-iterable implementation of a map that stores its content directly on the trie.
-#[derive(BorshSerialize, BorshDeserialize)]
+#[derive(BorshSerialize, BorshDeserialize, Debug)]
 pub struct LookupMap<K, V> {
     key_prefix: Vec<u8>,
     #[borsh_skip]
@@ -283,5 +283,23 @@ mod tests {
         for (key, value) in key_to_value {
             assert_eq!(map.get(&key).unwrap(), value);
         }
+    }
+
+    #[test]
+    fn test_debug() {
+        let mut rng = rand_xorshift::XorShiftRng::seed_from_u64(4);
+        let mut map = LookupMap::new(b"m");
+        let mut baseline = vec![];
+        for _ in 0..10 {
+            let key = rng.gen::<u64>();
+            let value = rng.gen::<u64>();
+            baseline.push((key, value));
+            map.insert(&key, &value);
+        }
+
+        assert_eq!(
+            format!("{:?}", map),
+            format!("LookupMap {{ key_prefix: {:?}, el: PhantomData }}", map.key_prefix)
+        );
     }
 }

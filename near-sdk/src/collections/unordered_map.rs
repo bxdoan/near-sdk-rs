@@ -241,6 +241,17 @@ where
     }
 }
 
+#[cfg(feature = "expensive-debug")]
+impl<K, V> std::fmt::Debug for UnorderedMap<K, V>
+where
+    K: std::fmt::Debug + BorshSerialize + BorshDeserialize,
+    V: std::fmt::Debug + BorshSerialize + BorshDeserialize,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.to_vec().fmt(f)
+    }
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 mod tests {
@@ -441,5 +452,21 @@ mod tests {
 
         let actual: HashMap<u64, u64> = map.iter().collect();
         assert_eq!(actual, key_to_value);
+    }
+
+    #[test]
+    #[cfg(feature = "expensive-debug")]
+    fn test_debug() {
+        let mut rng = rand_xorshift::XorShiftRng::seed_from_u64(4);
+        let mut map = UnorderedMap::new(b"m");
+        let mut baseline = vec![];
+        for _ in 0..10 {
+            let key = rng.gen::<u64>();
+            let value = rng.gen::<u64>();
+            baseline.push((key, value));
+            map.insert(&key, &value);
+        }
+
+        assert_eq!(format!("{:#?}", map), format!("{:#?}", baseline));
     }
 }
